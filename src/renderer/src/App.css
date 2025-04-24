@@ -1,0 +1,19 @@
+@import "tailwindcss";
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden; /* Prevent scrolling */
+  }
+  
+  #root {
+    height: 100%; /* Ensure the root element takes up the full height */
+  }
+  
+  .flex {
+    display: flex;
+  }
+  
+  .min-h-screen {
+    min-height: 100vh; /* Ensure the container takes up the full viewport height */
+  }

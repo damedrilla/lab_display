@@ -29,7 +29,7 @@ async def main():
     ssl_context.load_cert_chain(certfile="acertificate.pem", keyfile="aprivatekey.pem")
 
     # Start the WebSocket server with SSL
-    async with websockets.serve(nfc_reader, "localhost", 8770):
+    async with websockets.serve(nfc_reader, "localhost", 8770, ssl=ssl_context):
         print("Secure WebSocket server started at wss://localhost:8765")
         await asyncio.Future()  # Run forever
 

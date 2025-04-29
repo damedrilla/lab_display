@@ -22,7 +22,7 @@ function createWindow() {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000/proxy/course-plotting wss://localhost:* ws://localhost:*;"
+          "default-src 'self'; script-src 'self' 'unsafe-inline'; connect-src 'self' *;"
         ],
       },
     });

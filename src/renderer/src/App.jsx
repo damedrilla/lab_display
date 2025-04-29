@@ -1,7 +1,7 @@
 import React from 'react';
 import ClassScheduleCard from './components/ClassScheduleCard';
 import LaboratoryName from './components/LaboratoryName';
-import AnnouncementPopup from './components/AnnouncementPopup';
+import AnnouncementPopup from './components/AnnouncementPopup'; // Import the announcement popup
 import NFCReaderPopup from './components/NFCReaderPopup'; // Import the NFC reader popup
 
 const App = () => {
@@ -10,7 +10,7 @@ const App = () => {
       <LaboratoryName name="MAC Laboratory" />
       <div className="relative">
         <ClassScheduleCard />
-        <AnnouncementPopup /> {/* Superimpose the announcement popup */}
+        <AnnouncementPopup /> {/* Include the announcement popup */}
       </div>
       <NFCReaderPopup /> {/* Include the NFC reader popup */}
     </div>

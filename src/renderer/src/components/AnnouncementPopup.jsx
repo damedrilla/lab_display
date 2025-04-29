@@ -8,18 +8,15 @@ const AnnouncementPopup = () => {
         let reconnectInterval;
 
         const connectWebSocket = () => {
-            ws = new WebSocket('ws://localhost:8770'); // Connect to the announcement WebSocket server
+            ws = new WebSocket('wss://localhost:8770'); // Connect to the announcement WebSocket server
 
-            ws.onopen = () => {
-                console.log('WebSocket connection opened!');
+            ws.onopen = () => {;
                 clearInterval(reconnectInterval); // Clear the reconnection interval on successful connection
             };
 
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data); // Parse the incoming message
-                    console.log('Message received from server:', data);
-
                     if (data.message) {
                         console.log('Updating announcement state:', data.message);
                         setAnnouncement(data.message); // Update the announcement state
@@ -36,15 +33,13 @@ const AnnouncementPopup = () => {
             };
 
             ws.onclose = () => {
-                console.log('WebSocket connection closed. Attempting to reconnect...');
                 reconnectInterval = setInterval(() => {
-                    console.log('Reconnecting...');
+                    console.log('WebSocket connection closed. Attempting to reconnect...');
                     connectWebSocket(); // Attempt to reconnect
                 }, 5000); // Retry every 5 seconds
             };
 
             ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
                 ws.close(); // Close the connection on error to trigger reconnection
             };
         };
@@ -58,7 +53,6 @@ const AnnouncementPopup = () => {
     }, []);
 
     if (!announcement || announcement.trim() === '') {
-        console.log('No announcement to display.');
         return null;
     }
 

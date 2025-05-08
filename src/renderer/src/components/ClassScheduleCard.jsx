@@ -104,7 +104,7 @@ const ClassScheduleCard = () => {
             </p>
             {/* Day with white background */}
             <p className="text-9xl font-bold text-gray-800 bg-white px-6 py-4">
-              {currentDate.getDate()} {/* Current date */}
+              {String(currentDate.getDate()).padStart(2,"0")} {/* Current date */}
             </p>
             {/* Weekday with white background */}
             <p className="text-2xl font-medium text-gray-800 bg-white w-full text-center px-4 py-2 rounded-b-md">
@@ -138,6 +138,9 @@ const ClassScheduleCard = () => {
             )}
           </div>
         </div>
+        <p className="mt-4 text-md text-gray-300 font-bold text-center items-center mb-5">
+          Press Numpad Enter to open the fingerprint verification modal
+        </p>
       </div>
     </div>
   );

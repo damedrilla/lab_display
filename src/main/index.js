@@ -2,6 +2,8 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import path from 'path'
+import { execFile } from 'child_process'
 
 function createWindow() {
   // Create the browser window.
@@ -12,8 +14,8 @@ function createWindow() {
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      sandbox: true,
+      preload: path.join(__dirname, '../preload/index.js'),
+      sandbox: false,
     }
   })
 
@@ -93,5 +95,33 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
   }
 });
 
+ipcMain.on('run-verify-fingerprint', (event) => {
+  const exePath = 'C:\\current_schedule\\VerifyFingerprintAPP\\bin\\Release\\net9.0-windows\\publish\\VerifyFingerprintAPP.exe';
+
+  const child = execFile(exePath);
+
+  child.stdout.on('data', (data) => {
+    console.log("stdout:", data);
+
+    if (data.includes("Fingerprint MATCHED")) {
+      event.reply('dotnet-result', { success: true, message: 'Fingerprint verification successful!' });
+    } else if (data.includes("No match found")) {
+      event.reply('dotnet-result', { success: false, message: 'Fingerprint verification failed.' });
+    }
+  });
+
+  child.stderr.on('data', (data) => {
+    console.error("stderr:", data);
+  });
+
+  child.on('error', (error) => {
+    console.error("Failed to launch fingerprint verification app:", error);
+    event.reply('dotnet-result', { success: false, message: 'Fingerprint verification failed!' });
+  });
+
+  child.on('close', (code) => {
+    console.log(`Fingerprint verification app exited with code ${code}`);
+  });
+});
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and require them here.

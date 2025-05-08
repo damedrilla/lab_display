@@ -26,7 +26,7 @@ async def nfc_reader(websocket):
                 await websocket.send(uid)  # Send UID to the WebSocket client
             else:
                 pass
-            await asyncio.sleep(1)  # Poll every second
+            await asyncio.sleep(0.25)  # Poll every second
     except Exception as e:
         pass
 

@@ -100,5 +100,158 @@ def getVenueandPC():
         return jsonify(rows), 200  # Return the rows as JSON
     except mysql.connector.Error as e:
         return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/announcement', methods=['GET'])
+def getAnnouncement():
+    try:
+        # Connect to the database
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)  # Use dictionary=True to get results as dicts
+
+        # Execute the query
+        query = "SELECT * FROM current_announcement"
+        cursor.execute(query)
+
+        # Fetch all rows
+        rows = cursor.fetchall()
+
+        # Close the connection
+        cursor.close()
+        connection.close()
+
+        return jsonify(rows), 200  # Return the rows as JSON
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/announcement', methods=['PUT'])
+def updateAnnouncement():
+    try:
+        # Parse the JSON payload from the request
+        data = request.json
+        content = data.get('content')
+        is_image = data.get('isImage')
+
+        if content is None or is_image is None:
+            return jsonify({'error': 'Both "content" and "isImage" fields are required.'}), 400
+
+        # Connect to the database
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # Update the announcement with id = 1
+        query = "UPDATE current_announcement SET content = %s, isImage = %s WHERE id = 1"
+        cursor.execute(query, (content, is_image))
+
+        # Commit the changes
+        connection.commit()
+
+        # Close the connection
+        cursor.close()
+        connection.close()
+
+        return jsonify({'message': 'Announcement updated successfully.'}), 200
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pctovenue', methods=['GET'])
+def getAssignedVenues():
+    try:
+        # Connect to the database
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)  # Use dictionary=True to get results as dicts
+
+        # Execute the query with JOINs
+        query = """
+        SELECT vam.*, m.machineName, v.VenueDesc
+        FROM venue_assigned_machines vam
+        JOIN machines m ON vam.machineID = m.machineID
+        JOIN venue v ON vam.VenueID = v.VenueID;
+        """
+        cursor.execute(query)
+
+        # Fetch all rows
+        rows = cursor.fetchall()
+
+        # Close the connection
+        cursor.close()
+        connection.close()
+
+        return jsonify(rows), 200  # Return the rows as JSON
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/venues', methods=['GET'])
+def getVenues():
+    try:
+        # Connect to the database
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)  # Use dictionary=True to get results as dicts
+
+        # Execute the query
+        query = "SELECT * FROM venue"
+        cursor.execute(query)
+
+        # Fetch all rows
+        rows = cursor.fetchall()
+
+        # Close the connection
+        cursor.close()
+        connection.close()
+
+        return jsonify(rows), 200  # Return the rows as JSON
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/update_venue', methods=['PUT'])
+def updateVenue():
+    try:
+        # Parse the JSON payload from the request
+        data = request.json
+        machine_id = data.get('machineID')
+        venue_id = data.get('VenueID')
+
+        if not machine_id or not venue_id:
+            return jsonify({'error': 'Both "machineID" and "VenueID" fields are required.'}), 400
+
+        # Connect to the database
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # Update the venue ID for the given machine ID
+        query = "UPDATE venue_assigned_machines SET VenueID = %s WHERE machineID = %s"
+        cursor.execute(query, (venue_id, machine_id))
+
+        # Commit the changes
+        connection.commit()
+
+        # Close the connection
+        cursor.close()
+        connection.close()
+
+        return jsonify({'message': 'Venue updated successfully.'}), 200
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/pc', methods=['GET'])
+def getPC():
+    try:
+        # Connect to the database
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)  # Use dictionary=True to get results as dicts
+
+        # Execute the query
+        query = "SELECT * FROM machines"
+        cursor.execute(query)
+
+        # Fetch all rows
+        rows = cursor.fetchall()
+
+        # Close the connection
+        cursor.close()
+        connection.close()
+
+        return jsonify(rows), 200  # Return the rows as JSON
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
 if __name__ == '__main__':
     app.run(host='localhost', port=5000)

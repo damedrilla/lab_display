@@ -26,7 +26,7 @@ const LaboratoryName = ({ name }) => {
           alt="Logo"
           className="h-12 w-12 mr-4" // Adjust size and spacing as needed
         />
-        <p className="text-4xl font-bold">{name}</p> {/* Increased font size */}
+        <p className="text-4xl font-bold">{name || 'Loading...'}</p> {/* Increased font size */}
       </div>
 
       {/* Right: Real-Time Clock */}

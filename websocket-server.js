@@ -19,14 +19,13 @@ wss.on('connection', (ws) => {
     const messageContent = message.toString();
 
     // Create a JSON object with the message content
-    const jsonMessage = JSON.stringify(messageContent);
-    const parsedMessage = JSON.parse(jsonMessage);
-    console.log(`Received message: ${parsedMessage}`);
+
+    console.log(`Received message: ${messageContent}`);
 
     // Broadcast the JSON message to all connected clients
     for (const client of clients) {
       if (client.readyState === WebSocket.OPEN) {
-        client.send(jsonMessage);
+        client.send(messageContent);
       }
     }
   });

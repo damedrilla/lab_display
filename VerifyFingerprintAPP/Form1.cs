@@ -20,6 +20,7 @@ namespace VerifyFingerprintAPP
         private DPFP.Capture.Capture? Capturer;
         private FingerprintVerification? verification;
         private bool IsVerifying = true; // Auto-verify
+        private List<Fingerprint> cachedFingerprints = null;
 
         public Form1()
         {
@@ -85,7 +86,7 @@ namespace VerifyFingerprintAPP
         public void OnReaderDisconnect(object Capture, string ReaderSerialNumber) { }
         public void OnSampleQuality(object Capture, string ReaderSerialNumber, DPFP.Capture.CaptureFeedback Feedback) { }
 
-        public void ProcessCapture(Sample sample)
+        public async void ProcessCapture(Sample sample)
         {
             DisplayFingerprint(sample);
 
@@ -94,11 +95,29 @@ namespace VerifyFingerprintAPP
                 DPFP.FeatureSet features = ExtractFeatures(sample, DPFP.Processing.DataPurpose.Verification);
                 if (features != null)
                 {
-                    bool matched = verification.VerifyFingerprint(features);
+                    bool matched = await verification.VerifyFingerprintAsync(features, GetFingerprintsAsync);
                     StopCapture();
                     lblStatus.Text = matched ? "Fingerprint MATCHED!" : "No match found.";
+                    if (matched) Application.Exit();
                 }
             }
+        }
+
+        // Async fetch and cache
+        private async Task<List<Fingerprint>> GetFingerprintsAsync()
+        {
+            if (cachedFingerprints != null)
+                return cachedFingerprints;
+
+            string apiUrl = "http://ws-server.local:5000/api/fingerprints";
+            using var client = new HttpClient();
+            var response = await client.GetAsync(apiUrl);
+            if (!response.IsSuccessStatusCode)
+                return new List<Fingerprint>();
+
+            string jsonResponse = await response.Content.ReadAsStringAsync();
+            cachedFingerprints = JsonSerializer.Deserialize<List<Fingerprint>>(jsonResponse);
+            return cachedFingerprints;
         }
 
         private void DisplayFingerprint(Sample sample)
@@ -125,78 +144,62 @@ namespace VerifyFingerprintAPP
         // FingerprintVerification class
         public class FingerprintVerification
         {
-            private DPFP.Verification.Verification Verificator;
+            private DPFP.Verification.Verification Verificator = new DPFP.Verification.Verification();
 
-            public FingerprintVerification()
-            {
-                Verificator = new DPFP.Verification.Verification();
-            }
-
-            public bool VerifyFingerprint(DPFP.FeatureSet features)
+            public async Task<bool> VerifyFingerprintAsync(
+                DPFP.FeatureSet features,
+                Func<Task<List<Fingerprint>>> getFingerprintsAsync)
             {
                 try
                 {
-                    // REST API URL
-                    string apiUrl = "http://ws-server.local:5000/api/fingerprints";
-
-                    // Create an HTTP client
-                    using (var client = new HttpClient())
+                    var fingerprints = await getFingerprintsAsync();
+                    if (fingerprints == null || fingerprints.Count == 0)
                     {
-                        // Send a GET request to the REST API
-                        HttpResponseMessage response = client.GetAsync(apiUrl).Result;
+                        Console.WriteLine("ERROR: No fingerprints found.");
+                        return false;
+                    }
 
-                        if (response.IsSuccessStatusCode)
+                    bool matchFound = false;
+                    Parallel.ForEach(fingerprints, (fingerprint, state) =>
+                    {
+                        if (string.IsNullOrEmpty(fingerprint.FingerprintTemplate))
+                            return;
+
+                        try
                         {
-                            // Parse the JSON response
-                            string jsonResponse = response.Content.ReadAsStringAsync().Result;
-                            var fingerprints = JsonSerializer.Deserialize<List<Fingerprint>>(jsonResponse);
-                            Console.WriteLine($"INFO: Fingerprints fetched: {fingerprints.Count}");
-
-                            foreach (var fingerprint in fingerprints)
+                            byte[] templateData = Convert.FromBase64String(fingerprint.FingerprintTemplate);
+                            var template = new DPFP.Template();
+                            using (var ms = new MemoryStream(templateData))
                             {
-                                // Check if FingerprintTemplate is null or empty
-                                if (string.IsNullOrEmpty(fingerprint.FingerprintTemplate))
-                                {
-                                    Console.WriteLine($"WARNING: Skipping fingerprint with EmployeeNo {fingerprint.EmployeeNo} due to missing template.");
-                                    continue;
-                                }
+                                template.DeSerialize(ms);
+                            }
 
-                                // Decode the base64-encoded fingerprint template
-                                byte[] templateData = Convert.FromBase64String(fingerprint.FingerprintTemplate);
+                            var result = new DPFP.Verification.Verification.Result();
+                            Verificator.Verify(features, template, ref result);
 
-                                // Deserialize the fingerprint template
-                                DPFP.Template template = new DPFP.Template();
-                                using (MemoryStream ms = new MemoryStream(templateData))
-                                {
-                                    template.DeSerialize(ms);
-                                }
-
-                                // Perform fingerprint verification
-                                DPFP.Verification.Verification.Result result = new DPFP.Verification.Verification.Result();
-                                Verificator.Verify(features, template, ref result);
-
-                                if (result.Verified)
-                                {
-                                    Console.WriteLine($"SUCCESS: Fingerprint MATCHED with Employee No: {fingerprint.EmployeeNo}");
-                                    Application.Exit(); // Automatically close the app
-                                    return true;
-                                }
+                            if (result.Verified)
+                            {
+                                Console.WriteLine($"SUCCESS: Fingerprint MATCHED with Employee No: {fingerprint.EmployeeNo}");
+                                matchFound = true;
+                                state.Stop();
                             }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            Console.WriteLine($"ERROR: Failed to fetch fingerprints. Status code: {response.StatusCode}");
+                            Console.WriteLine($"EXCEPTION: Error processing fingerprint for EmployeeNo {fingerprint.EmployeeNo} - {ex.Message}");
                         }
-                    }
+                    });
+
+                    if (!matchFound)
+                        Console.WriteLine("ERROR: No match found.");
+
+                    return matchFound;
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine("EXCEPTION: Verification error - " + ex.Message);
+                    return false;
                 }
-
-                Console.WriteLine("ERROR: No match found.");
-                Application.Exit(); // Close even if no match
-                return false;
             }
         }
 

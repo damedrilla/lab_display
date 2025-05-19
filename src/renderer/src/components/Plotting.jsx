@@ -9,7 +9,7 @@ const Plotting = ({ machineID }) => {
   useEffect(() => {
     const fetchVenueID = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/pctovenue');
+        const response = await axios.get('http://ws-server.local:5000/api/pctovenue');
         const data = response.data;
 
         // Find the VenueID for the given machineID
@@ -36,7 +36,7 @@ const Plotting = ({ machineID }) => {
     const fetchSchedule = async () => {
       try {
         const response = await axios.post(
-          'http://localhost:5000/proxy/course-plotting',
+          'http://ws-server.local:5000/proxy/course-plotting',
           { VenueID: venueID }
         );
         const scheduleArray = Array.isArray(response.data) ? response.data : response.data.data;

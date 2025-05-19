@@ -21,7 +21,7 @@ const ClassScheduleCard = ({ setLaboratoryName }) => {
   // Function to fetch VenueID and VenueDesc for the MACHINE_ID
   const fetchVenueID = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/pctovenue');
+      const response = await fetch('http://ws-server.local:5000/api/pctovenue');
       if (!response.ok) {
         throw new Error('Failed to fetch venue data');
       }
@@ -57,7 +57,7 @@ const ClassScheduleCard = ({ setLaboratoryName }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/proxy/course-plotting', {
+      const response = await fetch('http://ws-server.local:5000/proxy/course-plotting', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -137,7 +137,7 @@ namespace VerifyFingerprintAPP
                 try
                 {
                     // REST API URL
-                    string apiUrl = "http://localhost:5000/api/fingerprints";
+                    string apiUrl = "http://ws-server.local:5000/api/fingerprints";
 
                     // Create an HTTP client
                     using (var client = new HttpClient())

@@ -5,6 +5,7 @@ import Plotting from './components/Plotting';
 import axios from 'axios';
 import { MACHINE_ID } from './utils/consts';
 import { base64Image } from './testimg';
+import NotificationPopup from './components/NotificationPopup'; // Import the NotificationPopup component
 
 const App = () => {
   const [displayMode, setDisplayMode] = useState('schedule'); // 'schedule' or 'announcement'
@@ -14,11 +15,11 @@ const App = () => {
   const pollingIntervalRef = useRef(null); // Polling interval reference
   const [laboratoryName, setLaboratoryName] = useState(''); // State for laboratory name
   const machineID = MACHINE_ID; // Replace with the actual machineID
-
+  const [notification, setNotification] = useState(null);
   // Fetch announcement from the API
   const fetchAnnouncement = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/announcement');
+      const response = await axios.get('http://ws-server.local:5000/api/announcement');
       if (response.data && response.data.length > 0) {
         const announcementData = response.data[0]; // Assuming the first entry is the current announcement
         setAnnouncement(announcementData); // Switch to announcement display
@@ -39,7 +40,7 @@ const App = () => {
         return;
       }
 
-      wsRef.current = new WebSocket('ws://localhost:8770'); // Connect to the WebSocket server
+      wsRef.current = new WebSocket('ws://ws-server.local:8770'); // Connect to the WebSocket server
 
       wsRef.current.onopen = () => {
         console.log('WebSocket connection established.');
@@ -110,7 +111,45 @@ const App = () => {
       }
     };
   }, []);
+  const launchFingerprintApp = () => {
+    console.log('Launching fingerprint verification app...');
+    window.ipcRenderer.send('run-verify-fingerprint'); // Send the event to the main process
 
+    // Listen for the result from the main process
+    window.ipcRenderer.once('dotnet-result', (event, result) => {
+      if (result.success) {
+        console.log(result.message); // Log success message
+        setNotification({ message: 'Fingerprint verification successful!', isSuccess: true }); // Show success notification
+        try {
+          const unlockResponse = axios.post('http://maclab.local:5000/unlock');
+          console.log('Door unlock response:', unlockResponse.data);
+        } catch (unlockError) {
+          console.error('Error unlocking the door:', unlockError);
+        }
+      } else {
+        console.error(result.message); // Log failure message
+        setNotification({ message: 'Fingerprint verification failed!', isSuccess: false }); // Show failure notification
+      }
+
+      // Clear the notification after 5 seconds
+      setTimeout(() => setNotification(null), 5000);
+    });
+  };
+
+  // Add a keydown event listener for Numpad Enter
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.code === 'NumpadEnter') {
+        launchFingerprintApp();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown); // Cleanup on unmount
+    };
+  }, []);
   return (
     <div className="relative flex flex-col items-center bg-gray-900">
       <LaboratoryName name={laboratoryName} /> {/* Pass laboratoryName to LaboratoryName */}
@@ -149,6 +188,12 @@ const App = () => {
           }
         })()}
       </div>
+      {notification && (
+        <NotificationPopup
+          message={notification.message}
+          isSuccess={notification.isSuccess}
+        />
+      )}
     </div>
   );
 };

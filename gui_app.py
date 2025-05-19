@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
         self.add_announcement_form_section()
 
         # WebSocket client
-        self.websocket_client = WebSocketClient("ws://localhost:8770")
+        self.websocket_client = WebSocketClient("ws://ws-server.local:8770")
         self.websocket_client.start()
 
     def add_update_venue_section(self):
@@ -170,7 +170,7 @@ class MainWindow(QMainWindow):
     def fetch_machines(self):
         """Fetch machines from the API and populate the machine dropdown."""
         try:
-            response = requests.get("http://localhost:5000/api/pc")
+            response = requests.get("http://ws-server.local:5000/api/pc")
             if response.status_code == 200:
                 machines = response.json()
                 self.machine_dropdown.clear()
@@ -187,7 +187,7 @@ class MainWindow(QMainWindow):
     def fetch_venues(self):
         """Fetch venues from the API and populate the venue dropdown."""
         try:
-            response = requests.get("http://localhost:5000/api/venues")
+            response = requests.get("http://ws-server.local:5000/api/venues")
             if response.status_code == 200:
                 venues = response.json()
                 self.venue_dropdown.clear()
@@ -207,7 +207,7 @@ class MainWindow(QMainWindow):
 
         # Fetch assigned venue for the selected machine
         try:
-            response = requests.get("http://localhost:5000/api/pctovenue")
+            response = requests.get("http://ws-server.local:5000/api/pctovenue")
             if response.status_code == 200:
                 assigned_venues = response.json()
                 assigned_venue_id = None
@@ -240,7 +240,7 @@ class MainWindow(QMainWindow):
 
         try:
             response = requests.put(
-                "http://localhost:5000/api/update_venue",
+                "http://ws-server.local:5000/api/update_venue",
                 json={"machineID": machine_id, "VenueID": venue_id},
             )
             if response.status_code == 200:
@@ -328,7 +328,7 @@ class MainWindow(QMainWindow):
         # Send the PUT request to update the announcement
         try:
             response = requests.put(
-                "http://localhost:5000/api/announcement",
+                "http://ws-server.local:5000/api/announcement",
                 json={"content": content, "isImage": is_image},
             )
             if response.status_code == 200:

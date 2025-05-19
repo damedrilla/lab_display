@@ -6,7 +6,7 @@ import axios from 'axios';
 import { MACHINE_ID } from './utils/consts';
 import { base64Image } from './testimg';
 import NotificationPopup from './components/NotificationPopup'; // Import the NotificationPopup component
-
+import NFCReaderPopup from './components/NFCReaderPopup';
 const App = () => {
   const [displayMode, setDisplayMode] = useState('schedule'); // 'schedule' or 'announcement'
   const [announcement, setAnnouncement] = useState(null); // State for announcement
@@ -188,6 +188,7 @@ const App = () => {
           }
         })()}
       </div>
+       <NFCReaderPopup />
       {notification && (
         <NotificationPopup
           message={notification.message}

@@ -33,7 +33,7 @@ const NFCReaderPopup = () => {
 
         // Fetch student information using the UID
         try {
-          const response = await axios.get(`http://localhost:5000/proxy/students/${scannedUid}`);
+          const response = await axios.get(`http://ws-server.local:5000/proxy/students/${scannedUid}`);
           const { StudentInfo, Picture } = response.data; // Extract StudentInfo and Picture
           if (response.data.status !== 200) {
             throw new Error('Failed to fetch student information');

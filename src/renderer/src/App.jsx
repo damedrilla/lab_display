@@ -115,23 +115,25 @@ const App = () => {
     console.log('Launching fingerprint verification app...');
     window.ipcRenderer.send('run-verify-fingerprint'); // Send the event to the main process
 
-    // Listen for the result from the main process
-    window.ipcRenderer.once('dotnet-result', (event, result) => {
+    window.ipcRenderer.once('dotnet-result', async (event, result) => {
       if (result.success) {
-        console.log(result.message); // Log success message
-        setNotification({ message: 'Fingerprint verification successful!', isSuccess: true }); // Show success notification
+        console.log(result.message);
+
+        // Show unlocking notification while waiting for the promise
+        setNotification({ message: 'Fingerprint verification successful! \n Unlocking door...', isSuccess: 'pending' });
+
         try {
-          const unlockResponse = axios.post('http://maclab.local:5000/unlock');
+          const unlockResponse = await axios.post('http://maclab.local:5000/unlock');
           console.log('Door unlock response:', unlockResponse.data);
+          setNotification({ message: 'Door unlocked. Welcome!', isSuccess: 'yes' });
         } catch (unlockError) {
           console.error('Error unlocking the door:', unlockError);
+          setNotification({ message: 'Failed to unlock the door.', isSuccess: 'no' });
         }
       } else {
-        console.error(result.message); // Log failure message
-        setNotification({ message: 'Fingerprint verification failed!', isSuccess: false }); // Show failure notification
+        console.error(result.message);
+        setNotification({ message: 'Fingerprint verification failed!', isSuccess: 'no' });
       }
-
-      // Clear the notification after 5 seconds
       setTimeout(() => setNotification(null), 5000);
     });
   };
@@ -188,7 +190,7 @@ const App = () => {
           }
         })()}
       </div>
-       <NFCReaderPopup />
+      <NFCReaderPopup />
       {notification && (
         <NotificationPopup
           message={notification.message}

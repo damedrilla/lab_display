@@ -98,7 +98,7 @@ namespace VerifyFingerprintAPP
                     bool matched = await verification.VerifyFingerprintAsync(features, GetFingerprintsAsync);
                     StopCapture();
                     lblStatus.Text = matched ? "Fingerprint MATCHED!" : "No match found.";
-                    if (matched) Application.Exit();
+                    Application.Exit(); // Always exit after verification
                 }
             }
         }

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Jun 01, 2025 at 04:08 AM
+-- Generation Time: Jun 01, 2025 at 01:26 PM
 -- Server version: 10.4.27-MariaDB
 -- PHP Version: 8.2.0
 
@@ -79,7 +79,7 @@ CREATE TABLE `current_faculty` (
 --
 
 INSERT INTO `current_faculty` (`id`, `empID`, `full_name`, `isPresent`, `start_time`, `end_time`) VALUES
-(1, 'EMP008', 'VINCENT CORTEZ', 1, '01:00:00', '05:59:00');
+(1, 'EMP008', 'VINCENT CORTEZ', 1, '01:00:00', '14:59:00');
 
 -- --------------------------------------------------------
 
@@ -152,19 +152,22 @@ CREATE TABLE `student_logs` (
   `full_name` varchar(255) NOT NULL,
   `instructor` varchar(255) NOT NULL,
   `time_arrived` datetime NOT NULL DEFAULT current_timestamp(),
-  `yr_section` varchar(255) NOT NULL
+  `yr_section` varchar(255) NOT NULL,
+  `lab_name` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `student_logs`
 --
 
-INSERT INTO `student_logs` (`id`, `studID`, `full_name`, `instructor`, `time_arrived`, `yr_section`) VALUES
-(1, 'C21101188', 'Alfred Joseph Baltazar', 'Sample Instructor', '2025-05-31 22:03:01', 'BSIT 1A'),
-(2, 'C21101188', 'Alfred Joseph Baltazar', 'Sample Instructor', '2025-05-31 22:03:02', 'BSIT 1A'),
-(3, 'C21101188', 'Alfred Joseph Baltazar', 'Sample Instructor', '2025-05-31 22:07:30', 'BSIT 1A'),
-(4, 'C21101188', 'Alfred Joseph Baltazar', 'Sample Instructor', '2025-06-01 03:17:27', 'BSIT 1A'),
-(5, 'C21101188', 'Alfred Joseph Baltazar', 'VINCENT CORTEZ', '2025-06-01 03:19:57', 'BSIT 1A');
+INSERT INTO `student_logs` (`id`, `studID`, `full_name`, `instructor`, `time_arrived`, `yr_section`, `lab_name`) VALUES
+(1, 'C21101188', 'Alfred Joseph Baltazar', 'Sample Instructor', '2025-05-31 22:03:01', 'BSIT 1A', 'Open Laboratory'),
+(2, 'C21101188', 'Alfred Joseph Baltazar', 'Sample Instructor', '2025-05-31 22:03:02', 'BSIT 1A', 'Open Laboratory'),
+(3, 'C21101188', 'Alfred Joseph Baltazar', 'Sample Instructor', '2025-05-31 22:07:30', 'BSIT 1A', 'Open Laboratory'),
+(4, 'C21101188', 'Alfred Joseph Baltazar', 'Sample Instructor', '2025-06-01 03:17:27', 'BSIT 1A', 'Open Laboratory'),
+(5, 'C21101188', 'Alfred Joseph Baltazar', 'VINCENT CORTEZ', '2025-06-01 03:19:57', 'BSIT 1A', 'Open Laboratory'),
+(6, 'C21101188', 'Alfred Joseph Baltazar', 'VINCENT CORTEZ', '2025-06-01 13:25:58', 'BSIT 1A', 'Open Laboratory'),
+(7, 'C21101188', 'Alfred Joseph Baltazar', 'VINCENT CORTEZ', '2025-06-01 13:27:59', 'BSIT 1A', 'MAC Laboratory');
 
 -- --------------------------------------------------------
 
@@ -231,7 +234,7 @@ CREATE TABLE `venue_assigned_machines` (
 --
 
 INSERT INTO `venue_assigned_machines` (`machineID`, `VenueID`) VALUES
-(1, '0000000010');
+(1, '0000000009');
 
 --
 -- Indexes for dumped tables
@@ -336,7 +339,7 @@ ALTER TABLE `plotting_test`
 -- AUTO_INCREMENT for table `student_logs`
 --
 ALTER TABLE `student_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- Constraints for dumped tables

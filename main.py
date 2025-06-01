@@ -295,9 +295,10 @@ def add_student_log():
         full_name = data.get('full_name')
         instructor = data.get('instructor')
         yr_section = data.get('yr_section')
+        lab_name = data.get('lab_name')
 
         # Validate required fields
-        if not all([studID, full_name, instructor, yr_section]):
+        if not all([studID, full_name, instructor, yr_section, lab_name]):
             return jsonify({'error': 'All fields are required.'}), 400
 
         connection = get_db_connection()
@@ -319,10 +320,10 @@ def add_student_log():
 
         # Insert new log
         query_insert = """
-            INSERT INTO student_logs (studID, full_name, instructor, yr_section)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO student_logs (studID, full_name, instructor, yr_section, lab_name)
+            VALUES (%s, %s, %s, %s, %s)
         """
-        cursor.execute(query_insert, (studID, full_name, instructor, yr_section))
+        cursor.execute(query_insert, (studID, full_name, instructor, yr_section, lab_name))
         connection.commit()
 
         cursor.close()

@@ -17,13 +17,13 @@ const ClassScheduleCard = ({ setLaboratoryName, setCurrentInstructor }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState([]);
   const [venueID, setVenueID] = useState(null); // State for VenueID
-  const [useDummyData, setUseDummyData] = useState(false); // Toggle for test mode
+  const [useDummyData, setUseDummyData] = useState(true); // Toggle for test mode
 
 
   // Function to fetch VenueID and VenueDesc for the MACHINE_ID
   const fetchVenueID = async () => {
     try {
-      const response = await fetch('http://ws-server.local:5000/api/pctovenue');
+      const response = await fetch('http://localhost:5000/api/pctovenue');
       if (!response.ok) {
         throw new Error('Failed to fetch venue data');
       }
@@ -59,7 +59,7 @@ const ClassScheduleCard = ({ setLaboratoryName, setCurrentInstructor }) => {
     }
 
     try {
-      const response = await fetch('http://ws-server.local:5000/proxy/course-plotting', {
+      const response = await fetch('http://localhost:5000/proxy/course-plotting', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -104,84 +104,73 @@ const ClassScheduleCard = ({ setLaboratoryName, setCurrentInstructor }) => {
   }, []);
 
   // Algorithm to check if a schedule is the current one
-useEffect(() => {
-  const checkCurrentSchedule = async () => {
-    const now = new Date();
-    const nowTimeString = now.toTimeString().split(' ')[0];
-    const currentDay = (now.getDay() || 7).toString();
+  useEffect(() => {
+    const checkCurrentSchedule = async () => {
+      const now = new Date();
+      const nowTimeString = now.toTimeString().split(' ')[0];
+      const currentDay = (now.getDay() || 7).toString();
 
-    const current = scheduleData.find((schedule) => {
-      const startTime = new Date(`1970-01-01T${schedule.StartTime}`);
-      const endTime = new Date(`1970-01-01T${schedule.EndTime}`);
-      const nowTime = new Date(`1970-01-01T${nowTimeString}`);
-      return (
-        nowTime >= startTime &&
-        nowTime <= endTime &&
-        schedule.DayOfWeek === currentDay
-      );
-    });
+      const current = scheduleData.find((schedule) => {
+        const startTime = new Date(`1970-01-01T${schedule.StartTime}`);
+        const endTime = new Date(`1970-01-01T${schedule.EndTime}`);
+        const nowTime = new Date(`1970-01-01T${nowTimeString}`);
+        return (
+          nowTime >= startTime &&
+          nowTime <= endTime &&
+          schedule.DayOfWeek === currentDay
+        );
+      });
 
-    setCurrentSchedule(current || null);
-    setCurrentInstructor(current ? current.EmployeeNo : null);
+      setCurrentSchedule(current || null);
+      setCurrentInstructor(current ? current.EmployeeNo : null);
 
-    // Fetch current_faculty from backend
-    let currentFaculty = null;
-    try {
-      const res = await axios.get('http://ws-server.local:5000/api/current_faculty');
-      currentFaculty = res.data;
-    } catch (err) {
-      console.error('Error fetching current_faculty:', err);
-    }
-
-    // If end_time in current_faculty is earlier than now, do not touch anything
-    if (
-      currentFaculty &&
-      currentFaculty.end_time &&
-      new Date(`1970-01-01T${currentFaculty.end_time}`) < now
-    ) {
-      return; // Do not update anything
-    }
-
-    // If there is a current schedule
-    if (current) {
-      // Only update if end_time is different or isPresent is false
-      if (
-        !currentFaculty ||
-        currentFaculty.end_time !== current.EndTime ||
-        !currentFaculty.isPresent
-      ) {
-        try {
-          await axios.put('http://ws-server.local:5000/api/current_faculty', {
-            empID: current.EmployeeNo,
-            full_name: `${current.FirstName?.trim() || ''} ${current.LastName?.trim() || ''}`,
-            isPresent: 0,
-            start_time: current.StartTime,
-            end_time: current.EndTime,
-          });
-        } catch (err) {
-          console.error('Error updating current_faculty:', err);
-        }
+      // Fetch current_faculty from backend
+      let currentFaculty = null;
+      try {
+        const res = await axios.get('http://localhost:5000/api/current_faculty');
+        currentFaculty = res.data;
+      } catch (err) {
+        console.error('Error fetching current_faculty:', err);
       }
-    } else {
-      // No current schedule, check if end_time has elapsed
+
+      //FACULTY PRESENCE LOGIC
+      // If end_time in current_faculty is earlier than now, do not touch anything
       if (
         currentFaculty &&
-        currentFaculty.end_time &&
-        new Date(`1970-01-01T${currentFaculty.end_time}`) < now
+        currentFaculty.end_time
       ) {
-        // Do nothing, already handled above
-        return;
-      }
-      // Optionally, clear current_faculty if needed (but only if end_time has NOT elapsed)
-      // ...your clear logic here if needed...
+        const now = new Date();
+        const [h, m, s] = currentFaculty.end_time.split(':');
+        const endTimeToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s);
+
+        if (now < endTimeToday) {
+          console.log('Current time is before end_time, not updating current_faculty.');
+          return; // Do not update anything if the current time is before end_time
+        } else {
+          // Only update if end_time is different or isPresent is false
+          if (current) {
+            try {
+              await axios.put('http://localhost:5000/api/current_faculty', {
+                empID: current.EmployeeNo,
+                full_name: `${current.FirstName?.trim() || ''} ${current.LastName?.trim() || ''}`,
+                isPresent: 0,
+                start_time: current.StartTime,
+                end_time: current.EndTime,
+              });
+            } catch (err) {
+              console.error('Error updating current_faculty:', err);
+            }
+          } else {
+            return;
+          }
+        }
+      };
     }
-  };
+    checkCurrentSchedule();
+    const interval = setInterval(checkCurrentSchedule, 1000);
 
-  checkCurrentSchedule();
-  const interval = setInterval(checkCurrentSchedule, 1000);
-
-  return () => clearInterval(interval);
-}, [scheduleData, setCurrentInstructor]);
+    return () => clearInterval(interval);
+  }, [scheduleData, setCurrentInstructor]);
 
   return (
     <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-900">

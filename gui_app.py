@@ -72,7 +72,7 @@ class MainWindow(QMainWindow):
         self.add_announcement_form_section()
 
         # WebSocket client
-        self.websocket_client = WebSocketClient("ws://ws-server.local:8770")
+        self.websocket_client = WebSocketClient("ws://localhost:8770")
         self.websocket_client.start()
 
     def add_update_venue_section(self):
@@ -191,7 +191,7 @@ class MainWindow(QMainWindow):
     def fetch_machines(self):
         """Fetch machines from the API and populate the machine dropdown."""
         try:
-            response = requests.get("http://ws-server.local:5000/api/pc")
+            response = requests.get("http://localhost:5000/api/pc")
             if response.status_code == 200:
                 machines = response.json()
                 self.machine_dropdown.clear()
@@ -208,7 +208,7 @@ class MainWindow(QMainWindow):
     def fetch_venues(self):
         """Fetch venues from the API and populate the venue dropdown."""
         try:
-            response = requests.get("http://ws-server.local:5000/api/venues")
+            response = requests.get("http://localhost:5000/api/venues")
             if response.status_code == 200:
                 venues = response.json()
                 self.venue_dropdown.clear()
@@ -228,7 +228,7 @@ class MainWindow(QMainWindow):
 
         # Fetch assigned venue for the selected machine
         try:
-            response = requests.get("http://ws-server.local:5000/api/pctovenue")
+            response = requests.get("http://localhost:5000/api/pctovenue")
             if response.status_code == 200:
                 assigned_venues = response.json()
                 assigned_venue_id = None
@@ -261,7 +261,7 @@ class MainWindow(QMainWindow):
 
         try:
             response = requests.put(
-                "http://ws-server.local:5000/api/update_venue",
+                "http://localhost:5000/api/update_venue",
                 json={"machineID": machine_id, "VenueID": venue_id},
             )
             if response.status_code == 200:
@@ -349,7 +349,7 @@ class MainWindow(QMainWindow):
         # Send the PUT request to update the announcement
         try:
             response = requests.put(
-                "http://ws-server.local:5000/api/announcement",
+                "http://localhost:5000/api/announcement",
                 json={"content": content, "isImage": is_image},
             )
             if response.status_code == 200:
@@ -383,7 +383,7 @@ class MainWindow(QMainWindow):
 
             # Check if PC name already exists
             try:
-                response = requests.get("http://ws-server.local:5000/api/pc")
+                response = requests.get("http://localhost:5000/api/pc")
                 if response.status_code == 200:
                     machines = response.json()
                     if any(machine['machineName'].lower() == pc_name.lower() for machine in machines):
@@ -399,7 +399,7 @@ class MainWindow(QMainWindow):
             # Proceed to add if not exists
             try:
                 response = requests.post(
-                    "http://ws-server.local:5000/api/pc",
+                    "http://localhost:5000/api/pc",
                     json={"machineName": pc_name},
                 )
                 if response.status_code == 201:
@@ -433,7 +433,7 @@ class MainWindow(QMainWindow):
         )
         if reply == QMessageBox.Yes:
             try:
-                response = requests.delete(f"http://ws-server.local:5000/api/pc/{machine_id}")
+                response = requests.delete(f"http://localhost:5000/api/pc/{machine_id}")
                 if response.status_code == 200:
                     self.show_popup_message("PC deleted successfully.")
                     self.fetch_machines()  # Refresh the dropdown

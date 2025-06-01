@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios'; // Import axios for API requests
 
-const NFCReaderPopup = () => {
+const NFCReaderPopup = ({labName}) => {
+  const labNameRef = useRef(labName);
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const [uid, setUid] = useState(null);
   const [studentInfo, setStudentInfo] = useState(null); // State to store student information
   const [error, setError] = useState(null); // State to store errors
   const wsRef = useRef(null); // Use a ref to store the WebSocket instance
   const reconnectIntervalRef = useRef(null); // Use a ref to store the reconnect interval
+  
+  //To retain the lab name across re-renders
+  useEffect(() => {
+    labNameRef.current = labName;
+  }, [labName]);
 
   useEffect(() => {
     const connectWebSocket = () => {
@@ -33,7 +39,7 @@ const NFCReaderPopup = () => {
 
         try {
           // 1. Check if instructor is present
-          const facultyRes = await axios.get('http://ws-server.local:5000/api/current_faculty');
+          const facultyRes = await axios.get('http://localhost:5000/api/current_faculty');
           if (!facultyRes.data || facultyRes.data.isPresent !== 1) {
             setError('Instructor is not present yet. Entry denied.');
             setStudentInfo(null);
@@ -45,7 +51,7 @@ const NFCReaderPopup = () => {
           }
 
           // 2. Fetch student information using the UID
-          const response = await axios.get(`http://ws-server.local:5000/proxy/students/${scannedUid}`);
+          const response = await axios.get(`http://localhost:5000/proxy/students/${scannedUid}`);
           const { StudentInfo, Picture } = response.data;
           if (response.data.status !== 200) {
             throw new Error('Failed to fetch student information');
@@ -54,12 +60,18 @@ const NFCReaderPopup = () => {
           setStudentInfo(fetchedStudentInfo);
           setError(null);
 
+          //Since the masterlists of every subject are not yet implemented, we will go straight to logging the student entry
+          //for now. If the masterlists get implemented, it should be before the step 3 below.
+
+          //await axios.post(`masterlist.url/${fetchedStudentInfo.StudentNo}`, {'courseID': whatever_course_id}`); or sumn
+
           // 3. Log student entry
-          await axios.post('http://ws-server.local:5000/api/student_logs', {
+          await axios.post('http://localhost:5000/api/student_logs', {
             studID: fetchedStudentInfo.StudentNo,
             full_name: `${fetchedStudentInfo.FirstName} ${fetchedStudentInfo.LastName}`,
             instructor: facultyRes.data.full_name,
-            yr_section: `${fetchedStudentInfo.CourseAbbr} ${fetchedStudentInfo.Year}${fetchedStudentInfo.Section}`
+            yr_section: `${fetchedStudentInfo.CourseAbbr} ${fetchedStudentInfo.Year}${fetchedStudentInfo.Section}`,
+            lab_name: labNameRef.current, 
           });
 
           // 4. Unlock the door

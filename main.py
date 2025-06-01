@@ -179,7 +179,7 @@ def getAssignedVenues():
         return jsonify(rows), 200  # Return the rows as JSON
     except mysql.connector.Error as e:
         return jsonify({'error': str(e)}), 500
-    
+
 @app.route('/api/venues', methods=['GET'])
 def getVenues():
     try:
@@ -217,9 +217,19 @@ def updateVenue():
         connection = get_db_connection()
         cursor = connection.cursor()
 
-        # Update the venue ID for the given machine ID
-        query = "UPDATE venue_assigned_machines SET VenueID = %s WHERE machineID = %s"
-        cursor.execute(query, (venue_id, machine_id))
+        # Check if the machineID already exists in venue_assigned_machines
+        query_check = "SELECT * FROM venue_assigned_machines WHERE machineID = %s"
+        cursor.execute(query_check, (machine_id,))
+        exists = cursor.fetchone()
+
+        if exists:
+            # Update the venue ID for the given machine ID
+            query_update = "UPDATE venue_assigned_machines SET VenueID = %s WHERE machineID = %s"
+            cursor.execute(query_update, (venue_id, machine_id))
+        else:
+            # Insert new assignment
+            query_insert = "INSERT INTO venue_assigned_machines (machineID, VenueID) VALUES (%s, %s)"
+            cursor.execute(query_insert, (machine_id, venue_id))
 
         # Commit the changes
         connection.commit()
@@ -228,7 +238,7 @@ def updateVenue():
         cursor.close()
         connection.close()
 
-        return jsonify({'message': 'Venue updated successfully.'}), 200
+        return jsonify({'message': 'Venue assignment added or updated successfully.'}), 200
     except mysql.connector.Error as e:
         return jsonify({'error': str(e)}), 500
     
@@ -251,6 +261,162 @@ def getPC():
         connection.close()
 
         return jsonify(rows), 200  # Return the rows as JSON
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/pc', methods=['POST'])
+def add_pc():
+    try:
+        data = request.json
+        machine_name = data.get('machineName')
+
+        if not machine_name:
+            return jsonify({'error': 'The "machineName" field is required.'}), 400
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        query = "INSERT INTO machines (machineName) VALUES (%s)"
+        cursor.execute(query, (machine_name,))
+        connection.commit()
+
+        cursor.close()
+        connection.close()
+
+        return jsonify({'message': 'PC added successfully.'}), 201
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/student_logs', methods=['POST'])
+def add_student_log():
+    try:
+        data = request.json
+        studID = data.get('studID')
+        full_name = data.get('full_name')
+        instructor = data.get('instructor')
+        yr_section = data.get('yr_section')
+
+        # Validate required fields
+        if not all([studID, full_name, instructor, yr_section]):
+            return jsonify({'error': 'All fields are required.'}), 400
+
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        # Check for existing log for this studID within the last 1 minute
+        query_check = """
+            SELECT * FROM student_logs
+            WHERE studID = %s
+              AND time_arrived >= (NOW() - INTERVAL 1 MINUTE)
+        """
+        cursor.execute(query_check, (studID,))
+        existing_log = cursor.fetchone()
+
+        if existing_log:
+            cursor.close()
+            connection.close()
+            return jsonify({'message': 'Already logged within the last minute.'}), 200
+
+        # Insert new log
+        query_insert = """
+            INSERT INTO student_logs (studID, full_name, instructor, yr_section)
+            VALUES (%s, %s, %s, %s)
+        """
+        cursor.execute(query_insert, (studID, full_name, instructor, yr_section))
+        connection.commit()
+
+        cursor.close()
+        connection.close()
+
+        return jsonify({'message': 'Student log added successfully.'}), 201
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+    
+@app.route('/api/current_faculty', methods=['PUT'])
+def update_current_faculty():
+    try:
+        data = request.json
+        empID = data.get('empID')
+        full_name = data.get('full_name')
+        isPresent = 0
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+
+        # Validate required fields
+        if not all([empID, full_name, isPresent is not None, start_time, end_time]):
+            return jsonify({'error': 'All fields (empID, full_name, isPresent, start_time, end_time) are required.'}), 400
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # Update the row with id = 1
+        query = """
+            UPDATE current_faculty
+            SET empID = %s, full_name = %s, isPresent = %s, start_time = %s, end_time = %s
+            WHERE id = 1
+        """
+        cursor.execute(query, (empID, full_name, isPresent, start_time, end_time))
+        connection.commit()
+
+        cursor.close()
+        connection.close()
+
+        return jsonify({'message': 'Current faculty updated successfully.'}), 200
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/current_faculty', methods=['GET'])
+def get_current_faculty():
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        # Fetch the row with id = 1
+        query = "SELECT * FROM current_faculty WHERE id = 1"
+        cursor.execute(query)
+        row = cursor.fetchone()
+
+        cursor.close()
+        connection.close()
+
+        if row:
+            return jsonify(row), 200
+        else:
+            return jsonify({'error': 'No current faculty found.'}), 404
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+@app.route('/api/current_faculty/present', methods=['PUT'])
+def set_current_faculty_present():
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # Update isPresent to 1 for the row with id = 1
+        query = "UPDATE current_faculty SET isPresent = 1 WHERE id = 1"
+        cursor.execute(query)
+        connection.commit()
+
+        cursor.close()
+        connection.close()
+
+        return jsonify({'message': 'isPresent updated to 1.'}), 200
+    except mysql.connector.Error as e:
+        return jsonify({'error': str(e)}), 500
+@app.route('/api/pc/<int:machine_id>', methods=['DELETE'])
+def delete_pc(machine_id):
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # Delete the PC with the given machineID
+        query = "DELETE FROM machines WHERE machineID = %s"
+        cursor.execute(query, (machine_id,))
+        connection.commit()
+
+        cursor.close()
+        connection.close()
+
+        return jsonify({'message': 'PC deleted successfully.'}), 200
     except mysql.connector.Error as e:
         return jsonify({'error': str(e)}), 500
 if __name__ == '__main__':

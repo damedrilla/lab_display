@@ -109,7 +109,7 @@ namespace VerifyFingerprintAPP
             if (cachedFingerprints != null)
                 return cachedFingerprints;
 
-            string apiUrl = "http://ws-server.local:5000/api/fingerprints";
+            string apiUrl = "http://localhost:5000/api/fingerprints";
             using var client = new HttpClient();
             var response = await client.GetAsync(apiUrl);
             if (!response.IsSuccessStatusCode)

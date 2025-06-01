@@ -31,18 +31,38 @@ const NFCReaderPopup = () => {
         setUid(scannedUid);
         setIsPopupVisible(true);
 
-        // Fetch student information using the UID
         try {
+          // 1. Check if instructor is present
+          const facultyRes = await axios.get('http://ws-server.local:5000/api/current_faculty');
+          if (!facultyRes.data || facultyRes.data.isPresent !== 1) {
+            setError('Instructor is not present yet. Entry denied.');
+            setStudentInfo(null);
+            setTimeout(() => {
+              setIsPopupVisible(false);
+              setError(null);
+            }, 5000);
+            return;
+          }
+
+          // 2. Fetch student information using the UID
           const response = await axios.get(`http://ws-server.local:5000/proxy/students/${scannedUid}`);
-          const { StudentInfo, Picture } = response.data; // Extract StudentInfo and Picture
+          const { StudentInfo, Picture } = response.data;
           if (response.data.status !== 200) {
             throw new Error('Failed to fetch student information');
           }
-          const fetchedStudentInfo = { ...StudentInfo, Picture }; // Prepare the student info object
-          setStudentInfo(fetchedStudentInfo); // Update state with the fetched student information
-          setError(null); // Clear any previous errors
+          const fetchedStudentInfo = { ...StudentInfo, Picture };
+          setStudentInfo(fetchedStudentInfo);
+          setError(null);
 
-          // Unlock the door if student info is fetched
+          // 3. Log student entry
+          await axios.post('http://ws-server.local:5000/api/student_logs', {
+            studID: fetchedStudentInfo.StudentNo,
+            full_name: `${fetchedStudentInfo.FirstName} ${fetchedStudentInfo.LastName}`,
+            instructor: facultyRes.data.full_name,
+            yr_section: `${fetchedStudentInfo.CourseAbbr} ${fetchedStudentInfo.Year}${fetchedStudentInfo.Section}`
+          });
+
+          // 4. Unlock the door
           try {
             const unlockResponse = await axios.post('http://maclab.local:5000/unlock');
             console.log('Door unlock response:', unlockResponse.data);
@@ -50,16 +70,16 @@ const NFCReaderPopup = () => {
             console.error('Error unlocking the door:', unlockError);
           }
         } catch (err) {
-          console.error('Error fetching student information:', err);
+          console.error('Error:', err);
           setError('Failed to fetch student information.');
-          setStudentInfo(null); // Clear student info on error
+          setStudentInfo(null);
         }
 
         // Hide the popup after 5 seconds
         setTimeout(() => {
           setIsPopupVisible(false);
-          setStudentInfo(null); // Clear student info when popup hides
-          setError(null); // Clear error when popup hides
+          setStudentInfo(null);
+          setError(null);
         }, 5000);
       };
 
@@ -98,7 +118,11 @@ const NFCReaderPopup = () => {
     isPopupVisible && (
       <div
         className={`fixed top-4 right-4 p-4 rounded shadow-lg z-50 ${
-          studentInfo ? 'bg-green-600' : 'bg-blue-600'
+          error
+            ? 'bg-red-600'
+            : studentInfo
+            ? 'bg-green-600'
+            : 'bg-blue-600'
         } text-white`}
       >
         {studentInfo ? (
@@ -109,7 +133,7 @@ const NFCReaderPopup = () => {
             <p>{studentInfo.CourseAbbr} {studentInfo.Year}{studentInfo.Section}</p>
           </div>
         ) : error ? (
-          <p className="text-white-500 font-bold">Cardholder doesn't exist!</p>
+          <p className="text-white-500 font-bold">{error}</p>
         ) : (
           <p>Loading cardholder information...</p>
         )}

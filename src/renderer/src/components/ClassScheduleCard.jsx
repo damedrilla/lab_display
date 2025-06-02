@@ -17,13 +17,13 @@ const ClassScheduleCard = ({ setLaboratoryName, setCurrentInstructor }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [scheduleData, setScheduleData] = useState([]);
   const [venueID, setVenueID] = useState(null); // State for VenueID
-  const [useDummyData, setUseDummyData] = useState(true); // Toggle for test mode
+  const [useDummyData, setUseDummyData] = useState(false); // Toggle for test mode
 
 
   // Function to fetch VenueID and VenueDesc for the MACHINE_ID
   const fetchVenueID = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/pctovenue');
+      const response = await fetch('http://ws-server.local:5000/api/pctovenue');
       if (!response.ok) {
         throw new Error('Failed to fetch venue data');
       }
@@ -59,7 +59,7 @@ const ClassScheduleCard = ({ setLaboratoryName, setCurrentInstructor }) => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/proxy/course-plotting', {
+      const response = await fetch('http://ws-server.local:5000/proxy/course-plotting', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ const ClassScheduleCard = ({ setLaboratoryName, setCurrentInstructor }) => {
       // Fetch current_faculty from backend
       let currentFaculty = null;
       try {
-        const res = await axios.get('http://localhost:5000/api/current_faculty');
+        const res = await axios.get('http://ws-server.local:5000/api/current_faculty');
         currentFaculty = res.data;
       } catch (err) {
         console.error('Error fetching current_faculty:', err);
@@ -150,7 +150,7 @@ const ClassScheduleCard = ({ setLaboratoryName, setCurrentInstructor }) => {
           // Only update if end_time is different or isPresent is false
           if (current) {
             try {
-              await axios.put('http://localhost:5000/api/current_faculty', {
+              await axios.put('http://ws-server.local:5000/api/current_faculty', {
                 empID: current.EmployeeNo,
                 full_name: `${current.FirstName?.trim() || ''} ${current.LastName?.trim() || ''}`,
                 isPresent: 0,

@@ -13,7 +13,7 @@ const AnnouncementPopup = () => {
                 return;
             }
 
-            wsRef.current = new WebSocket('ws://localhost:8770'); // Connect to the announcement WebSocket server
+            wsRef.current = new WebSocket('ws://ws-server.local:8770'); // Connect to the announcement WebSocket server
 
             wsRef.current.onopen = () => {
                 console.log('WebSocket connection established.');

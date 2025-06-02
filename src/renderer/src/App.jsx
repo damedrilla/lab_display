@@ -20,7 +20,7 @@ const App = () => {
   // Fetch announcement from the API
   const fetchAnnouncement = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/announcement');
+      const response = await axios.get('http://ws-server.local:5000/api/announcement');
       if (response.data && response.data.length > 0) {
         const announcementData = response.data[0]; // Assuming the first entry is the current announcement
         setAnnouncement(announcementData); // Switch to announcement display
@@ -42,7 +42,7 @@ const App = () => {
         return;
       }
 
-      wsRef.current = new WebSocket('ws://localhost:8770'); // Connect to the WebSocket server
+      wsRef.current = new WebSocket('ws://ws-server.local:8770'); // Connect to the WebSocket server
 
       wsRef.current.onopen = () => {
         console.log('WebSocket connection established.');
@@ -121,12 +121,12 @@ const launchFingerprintApp = () => {
     if (result.success) {
       try {
         // Get current faculty from backend
-        const facultyRes = await axios.get('http://localhost:5000/api/current_faculty');
+        const facultyRes = await axios.get('http://ws-server.local:5000/api/current_faculty');
         const currentEmpID = facultyRes.data?.empID;
 
         if (result.employeeNumber === currentEmpID) {
           // If match, update isPresent to 1
-          await axios.put('http://localhost:5000/api/current_faculty/present');
+          await axios.put('http://ws-server.local:5000/api/current_faculty/present');
        
 
         // Proceed to unlock the door regardless of match
@@ -138,7 +138,7 @@ const launchFingerprintApp = () => {
           setNotification({ message: `Door unlock failed. Please report to the technicians`, isSuccess: 'no' });
         }
          } else { 
-          setNotification({ message: `Instructor ${result.fullName} is not scheduled in this laboratory right now.`, isSuccess: 'no' });
+          setNotification({ message: `Access denied: You are not scheduled to use this laboratory right now.`, isSuccess: 'no' });
          }
       } catch (err) {
         setNotification({ message: `Error verifying instructor.`, isSuccess: 'no' });

@@ -97,7 +97,7 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
 });
 
 ipcMain.on('run-verify-fingerprint', (event) => {
-  const exePath = 'G:\\lab_display\\VerifyFingerprintAPP\\bin\\Release\\net8.0-windows\\publish\\VerifyFingerprintAPP.exe';
+  const exePath = 'C:\\current_schedule\\VerifyFingerprintAPP\\bin\\Release\\net9.0-windows\\publish\\VerifyFingerprintAPP.exe';
 
   const child = execFile(exePath);
 

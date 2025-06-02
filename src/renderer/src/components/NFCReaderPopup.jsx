@@ -39,7 +39,7 @@ const NFCReaderPopup = ({labName}) => {
 
         try {
           // 1. Check if instructor is present
-          const facultyRes = await axios.get('http://localhost:5000/api/current_faculty');
+          const facultyRes = await axios.get('http://ws-server.local:5000/api/current_faculty');
           if (!facultyRes.data || facultyRes.data.isPresent !== 1) {
             setError('Instructor is not present yet. Entry denied.');
             setStudentInfo(null);
@@ -51,7 +51,7 @@ const NFCReaderPopup = ({labName}) => {
           }
 
           // 2. Fetch student information using the UID
-          const response = await axios.get(`http://localhost:5000/proxy/students/${scannedUid}`);
+          const response = await axios.get(`http://ws-server.local:5000/proxy/students/${scannedUid}`);
           const { StudentInfo, Picture } = response.data;
           if (response.data.status !== 200) {
             throw new Error('Failed to fetch student information');
@@ -66,7 +66,7 @@ const NFCReaderPopup = ({labName}) => {
           //await axios.post(`masterlist.url/${fetchedStudentInfo.StudentNo}`, {'courseID': whatever_course_id}`); or sumn
 
           // 3. Log student entry
-          await axios.post('http://localhost:5000/api/student_logs', {
+          await axios.post('http://ws-server.local:5000/api/student_logs', {
             studID: fetchedStudentInfo.StudentNo,
             full_name: `${fetchedStudentInfo.FirstName} ${fetchedStudentInfo.LastName}`,
             instructor: facultyRes.data.full_name,

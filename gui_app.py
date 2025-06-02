@@ -4,7 +4,7 @@ import websockets
 import base64
 import requests
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QGroupBox, QLineEdit, QPushButton, QLabel, QComboBox, QRadioButton, QButtonGroup, QMessageBox, QFileDialog, QWidget
+    QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QGroupBox, QLineEdit, QPushButton, QLabel, QComboBox, QRadioButton, QButtonGroup, QMessageBox, QFileDialog, QWidget, QDialog
 )
 from PySide6.QtCore import QThread, Signal
 
@@ -24,7 +24,8 @@ class WebSocketClient(QThread):
                 self.websocket = websocket
                 while self.running:
                     try:
-                        message = await websocket.recv()# Emit the received message to the GUI
+                        message = await websocket.recv()
+                        self.message_received.emit(message)
                     except Exception as e:
                         print(f"Error receiving message: {e}")
                         break
@@ -32,11 +33,20 @@ class WebSocketClient(QThread):
             print(f"Failed to connect to WebSocket server: {e}")
 
     def run(self):
-        asyncio.run(self.connect())
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        while self.running:
+            loop.run_until_complete(self.connect())
+            if self.running:
+                print("WebSocket disconnected. Reconnecting in 3 seconds...")
+                loop.run_until_complete(asyncio.sleep(3))
 
     def send_message(self, message):
         try:
-            asyncio.run(self.websocket.send(message))
+            if self.websocket:
+                asyncio.run(self.websocket.send(message))
+            else:
+                print("WebSocket is not connected.")
         except Exception as e:
             print(f"Error sending message: {e}")
 
@@ -48,7 +58,7 @@ class WebSocketClient(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Management Dashboard")
+        self.setWindowTitle("Lab Display Remote Control")
         self.setGeometry(100, 100, 600, 600)
 
         # Main layout
@@ -62,7 +72,7 @@ class MainWindow(QMainWindow):
         self.add_announcement_form_section()
 
         # WebSocket client
-        self.websocket_client = WebSocketClient("ws://ws-server.local:8770")
+        self.websocket_client = WebSocketClient("ws://localhost:8770")
         self.websocket_client.start()
 
     def add_update_venue_section(self):
@@ -87,6 +97,17 @@ class MainWindow(QMainWindow):
         # Update button
         self.update_venue_button = QPushButton("Update Venue")
         update_venue_layout.addWidget(self.update_venue_button)
+
+        # Add PC button
+        self.add_pc_button = QPushButton("Add PC")
+        update_venue_layout.addWidget(self.add_pc_button)
+        self.add_pc_button.clicked.connect(self.show_add_pc_dialog)
+
+        # Delete PC button
+        self.delete_pc_button = QPushButton("Delete PC")
+        self.delete_pc_button.setStyleSheet("background-color: #e3342f; color: white;")  # Red background
+        update_venue_layout.addWidget(self.delete_pc_button)
+        self.delete_pc_button.clicked.connect(self.delete_selected_pc)
 
         # Connect button to action
         self.update_venue_button.clicked.connect(self.update_venue)
@@ -170,7 +191,7 @@ class MainWindow(QMainWindow):
     def fetch_machines(self):
         """Fetch machines from the API and populate the machine dropdown."""
         try:
-            response = requests.get("http://ws-server.local:5000/api/pc")
+            response = requests.get("http://localhost:5000/api/pc")
             if response.status_code == 200:
                 machines = response.json()
                 self.machine_dropdown.clear()
@@ -187,13 +208,13 @@ class MainWindow(QMainWindow):
     def fetch_venues(self):
         """Fetch venues from the API and populate the venue dropdown."""
         try:
-            response = requests.get("http://ws-server.local:5000/api/venues")
+            response = requests.get("http://localhost:5000/api/venues")
             if response.status_code == 200:
                 venues = response.json()
                 self.venue_dropdown.clear()
                 for venue in venues:
                     # Add VenueDesc and VenueID to the dropdown
-                    self.venue_dropdown.addItem(f"{venue['VenueDesc']} ({venue['VenueID']})", venue['VenueID'])
+                    self.venue_dropdown.addItem(f"{venue['VenueDesc']} (ID: {venue['VenueID']})", venue['VenueID'])
             else:
                 self.show_popup_message(f"Error fetching venues: {response.text}", success=False)
         except Exception as e:
@@ -207,7 +228,7 @@ class MainWindow(QMainWindow):
 
         # Fetch assigned venue for the selected machine
         try:
-            response = requests.get("http://ws-server.local:5000/api/pctovenue")
+            response = requests.get("http://localhost:5000/api/pctovenue")
             if response.status_code == 200:
                 assigned_venues = response.json()
                 assigned_venue_id = None
@@ -240,7 +261,7 @@ class MainWindow(QMainWindow):
 
         try:
             response = requests.put(
-                "http://ws-server.local:5000/api/update_venue",
+                "http://localhost:5000/api/update_venue",
                 json={"machineID": machine_id, "VenueID": venue_id},
             )
             if response.status_code == 200:
@@ -284,7 +305,7 @@ class MainWindow(QMainWindow):
         message = "show_image"
         try:
             self.websocket_client.send_message(message)
-            self.show_popup_message("Sent: Show Image")
+            self.show_popup_message("Sent: Show Plotting")
         except Exception as e:
             self.show_popup_message(f"Error: {e}", success=False)
 
@@ -328,7 +349,7 @@ class MainWindow(QMainWindow):
         # Send the PUT request to update the announcement
         try:
             response = requests.put(
-                "http://ws-server.local:5000/api/announcement",
+                "http://localhost:5000/api/announcement",
                 json={"content": content, "isImage": is_image},
             )
             if response.status_code == 200:
@@ -338,9 +359,103 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.show_popup_message(f"Error sending request: {e}", success=False)
 
+    def show_add_pc_dialog(self):
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Add PC")
+        layout = QVBoxLayout(dialog)
+
+        label = QLabel("Enter PC Name:")
+        layout.addWidget(label)
+
+        pc_name_input = QLineEdit()
+        layout.addWidget(pc_name_input)
+
+        submit_btn = QPushButton("Add")
+        layout.addWidget(submit_btn)
+
+        def submit():
+            pc_name = pc_name_input.text().strip()
+            if not pc_name:
+                self.show_popup_message("PC name cannot be empty.", success=False)
+                return
+
+            # Check if PC name already exists
+            try:
+                response = requests.get("http://localhost:5000/api/pc")
+                if response.status_code == 200:
+                    machines = response.json()
+                    if any(machine['machineName'].lower() == pc_name.lower() for machine in machines):
+                        self.show_popup_message("PC name already exists.", success=False)
+                        return
+                else:
+                    self.show_popup_message(f"Error checking existing PCs: {response.text}", success=False)
+                    return
+            except Exception as e:
+                self.show_popup_message(f"Error checking existing PCs: {e}", success=False)
+                return
+
+            # Proceed to add if not exists
+            try:
+                response = requests.post(
+                    "http://localhost:5000/api/pc",
+                    json={"machineName": pc_name},
+                )
+                if response.status_code == 201:
+                    self.show_popup_message("PC added successfully.")
+                    self.fetch_machines()  # Refresh the dropdown
+                    dialog.accept()
+                else:
+                    self.show_popup_message(f"Error adding PC: {response.text}", success=False)
+            except Exception as e:
+                self.show_popup_message(f"Error sending request: {e}", success=False)
+
+        submit_btn.clicked.connect(submit)
+        dialog.exec()
+
+    def delete_selected_pc(self):
+        from PySide6.QtWidgets import QMessageBox
+
+        machine_id = self.machine_dropdown.currentData()
+        machine_name = self.machine_dropdown.currentText()
+        if not machine_id:
+            self.show_popup_message("No PC selected to delete.", success=False)
+            return
+
+        # Show warning popup
+        reply = QMessageBox.question(
+            self,
+            "Confirm Delete",
+            f"Are you sure you want to delete '{machine_name}'?\n\nThis action cannot be undone.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            try:
+                response = requests.delete(f"http://localhost:5000/api/pc/{machine_id}")
+                if response.status_code == 200:
+                    self.show_popup_message("PC deleted successfully.")
+                    self.fetch_machines()  # Refresh the dropdown
+                else:
+                    self.show_popup_message(f"Error deleting PC: {response.text}", success=False)
+            except Exception as e:
+                self.show_popup_message(f"Error sending delete request: {e}", success=False)
+
     def closeEvent(self, event):
         self.websocket_client.stop()
         super().closeEvent(event)
+
+
+class LoadingDialog(QDialog):
+    def __init__(self, message="Loading...", parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Please Wait")
+        self.setModal(True)
+        layout = QVBoxLayout(self)
+        label = QLabel(message)
+        layout.addWidget(label)
+        self.setFixedSize(200, 80)
 
 
 if __name__ == "__main__":

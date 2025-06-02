@@ -97,19 +97,55 @@ app.on('certificate-error', (event, webContents, url, error, certificate, callba
 });
 
 ipcMain.on('run-verify-fingerprint', (event) => {
-  const exePath = 'C:\\current_schedule\\VerifyFingerprintAPP\\bin\\Release\\net9.0-windows\\publish\\VerifyFingerprintAPP.exe';
+  const exePath = 'G:\\lab_display\\VerifyFingerprintAPP\\bin\\Release\\net8.0-windows\\publish\\VerifyFingerprintAPP.exe';
 
   const child = execFile(exePath);
 
-  child.stdout.on('data', (data) => {
-    console.log("stdout:", data);
+child.stdout.on('data', async (data) => {
+  const output = data.toString();
+  console.log("stdout:", output);
 
-    if (data.includes("Fingerprint MATCHED")) {
-      event.reply('dotnet-result', { success: true, message: 'Fingerprint verification successful!' });
-    } else if (data.includes("No match found")) {
-      event.reply('dotnet-result', { success: false, message: 'Fingerprint verification failed.' });
+  const match = output.match(/employee no:\s*(EMP\d+)/i); // relaxed digit restriction
+
+  if (match) {
+    const employeeNumber = match[1].toUpperCase(); // normalize
+
+    try {
+      const response = await fetch('https://unis.cspc.edu.ph/unise/APIv1/Employee/');
+      const json = await response.json();
+
+      const employee = json.data.find(emp => emp.EmployeeNo === employeeNumber);
+
+      if (employee) {
+        const fullName = `${employee.FirstName} ${employee.LastName}`;
+        event.reply('dotnet-result', {
+          success: true,
+          message: 'Fingerprint verification successful!',
+          employeeNumber,
+          fullName
+        });
+      } else {
+        event.reply('dotnet-result', {
+          success: true,
+          message: `Fingerprint matched, but employee ID ${employeeNumber} was not found in the database.`,
+          employeeNumber
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching employee data:", err);
+      event.reply('dotnet-result', {
+        success: true,
+        message: `Fingerprint matched with ${employeeNumber}, but failed to fetch employee details.`,
+        employeeNumber
+      });
     }
-  });
+  } else if (output.includes("No match found")) {
+    event.reply('dotnet-result', {
+      success: false,
+      message: 'Fingerprint verification failed.'
+    });
+  }
+});
 
   child.stderr.on('data', (data) => {
     console.error("stderr:", data);

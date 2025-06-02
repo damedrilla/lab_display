@@ -16,10 +16,11 @@ const App = () => {
   const [laboratoryName, setLaboratoryName] = useState(''); // State for laboratory name
   const machineID = MACHINE_ID; // Replace with the actual machineID
   const [notification, setNotification] = useState(null);
+  const [currentInstructor, setCurrentInstructor] = useState(null);
   // Fetch announcement from the API
   const fetchAnnouncement = async () => {
     try {
-      const response = await axios.get('http://ws-server.local:5000/api/announcement');
+      const response = await axios.get('http://localhost:5000/api/announcement');
       if (response.data && response.data.length > 0) {
         const announcementData = response.data[0]; // Assuming the first entry is the current announcement
         setAnnouncement(announcementData); // Switch to announcement display
@@ -34,13 +35,14 @@ const App = () => {
 
   // WebSocket connection logic
   useEffect(() => {
+
     const connectWebSocket = () => {
       if (wsRef.current) {
         console.log('WebSocket already exists. Reusing the existing connection.');
         return;
       }
 
-      wsRef.current = new WebSocket('ws://ws-server.local:8770'); // Connect to the WebSocket server
+      wsRef.current = new WebSocket('ws://localhost:8770'); // Connect to the WebSocket server
 
       wsRef.current.onopen = () => {
         console.log('WebSocket connection established.');
@@ -111,35 +113,46 @@ const App = () => {
       }
     };
   }, []);
-  const launchFingerprintApp = () => {
-    console.log('Launching fingerprint verification app...');
-    window.ipcRenderer.send('run-verify-fingerprint'); // Send the event to the main process
+const launchFingerprintApp = () => {
+  console.log('Launching fingerprint verification app...');
+  window.ipcRenderer.send('run-verify-fingerprint'); // Send the event to the main process
 
-    window.ipcRenderer.once('dotnet-result', async (event, result) => {
-      if (result.success) {
-        console.log(result.message);
+  window.ipcRenderer.once('dotnet-result', async (event, result) => {
+    if (result.success) {
+      try {
+        // Get current faculty from backend
+        const facultyRes = await axios.get('http://localhost:5000/api/current_faculty');
+        const currentEmpID = facultyRes.data?.empID;
 
-        // Show unlocking notification while waiting for the promise
-        setNotification({ message: 'Fingerprint verification successful! \n Unlocking door...', isSuccess: 'pending' });
+        if (result.employeeNumber === currentEmpID) {
+          // If match, update isPresent to 1
+          await axios.put('http://localhost:5000/api/current_faculty/present');
+       
 
+        // Proceed to unlock the door regardless of match
+        setNotification({ message: `Fingerprint verified. Door unlocking...`, isSuccess: 'waiting' });
         try {
-          const unlockResponse = await axios.post('http://maclab.local:5000/unlock');
-          console.log('Door unlock response:', unlockResponse.data);
-          setNotification({ message: 'Door unlocked. Welcome!', isSuccess: 'yes' });
+          await axios.post('http://maclab.local:5000/unlock');
+          setNotification({ message: `Door unlocked, Hello, ${result.fullName}!`, isSuccess: 'yes' });
         } catch (unlockError) {
-          console.error('Error unlocking the door:', unlockError);
-          setNotification({ message: 'Failed to unlock the door.', isSuccess: 'no' });
+          setNotification({ message: `Door unlock failed. Please report to the technicians`, isSuccess: 'no' });
         }
-      } else {
-        console.error(result.message);
-        setNotification({ message: 'Fingerprint verification failed!', isSuccess: 'no' });
+         } else { 
+          setNotification({ message: `Instructor ${result.fullName} is not scheduled in this laboratory right now.`, isSuccess: 'no' });
+         }
+      } catch (err) {
+        setNotification({ message: `Error verifying instructor.`, isSuccess: 'no' });
       }
-      setTimeout(() => setNotification(null), 5000);
-    });
-  };
+    } else {
+      setNotification({ message: 'Fingerprint verification failed!', isSuccess: 'no' });
+    }
+    setTimeout(() => setNotification(null), 5000);
+  });
+};
 
   // Add a keydown event listener for Numpad Enter
   useEffect(() => {
+      console.log('Current instructor in App:', currentInstructor);
     const handleKeyDown = (event) => {
       if (event.code === 'NumpadEnter') {
         launchFingerprintApp();
@@ -158,7 +171,7 @@ const App = () => {
       <div className="relative flex justify-center items-center min-h-screen">
         {(() => {
           if (displayMode === 'schedule') {
-            return <ClassScheduleCard setLaboratoryName={setLaboratoryName} />; {/* Pass setter to ClassScheduleCard */ }
+            return <ClassScheduleCard setLaboratoryName={setLaboratoryName} setCurrentInstructor={setCurrentInstructor} />; {/* Pass setter to ClassScheduleCard */ }
           } else if (displayMode === 'announcement') {
             return (
               <div className="w-full max-w-7xl bg-white dark:bg-gray-800 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 p-6">
@@ -190,7 +203,7 @@ const App = () => {
           }
         })()}
       </div>
-      <NFCReaderPopup />
+      <NFCReaderPopup labName={laboratoryName}/>
       {notification && (
         <NotificationPopup
           message={notification.message}
